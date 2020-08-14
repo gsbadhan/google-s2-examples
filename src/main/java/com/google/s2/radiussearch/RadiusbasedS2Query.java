@@ -20,8 +20,10 @@ import com.google.common.geometry.S2RegionCoverer;
 
 public class RadiusbasedS2Query {
 
-	static HashMap<String, S2Cell> locationsDB = new HashMap<String, S2Cell>();
-	static Set<String> searchResults = new HashSet<String>();
+	private static double kEarthCircumferenceMeters = 1000 * 40075.017;
+
+	private static HashMap<String, S2Cell> locationsDB = new HashMap<String, S2Cell>();
+	private static Set<String> searchResults = new HashSet<String>();
 	static {
 		locationsDB.put("hdfc bank", getS2Cell(28.51454331, 77.38510503, 13));
 		locationsDB.put("tyagi dairy", getS2Cell(28.51569693, 77.38408678, 13));
@@ -32,10 +34,8 @@ public class RadiusbasedS2Query {
 		locationsDB.put("shiv mandir", getS2Cell(28.50422003, 77.38642473, 13));
 		locationsDB.put("jaypee green", getS2Cell(28.51936532, 77.36270293, 13));
 	}
-	
-	static double kEarthCircumferenceMeters = 1000 * 40075.017;
 
-	static double earthMetersToRadians(double meters) {
+	private static double earthMetersToRadians(double meters) {
 		return (2 * S2.M_PI) * (meters / kEarthCircumferenceMeters);
 	}
 
@@ -46,7 +46,7 @@ public class RadiusbasedS2Query {
 		return new S2Cell(S2LatLng.fromDegrees(lat, lng).toPoint());
 	}
 
-	static double radiusRadians(double meters) {
+	private static double radiusRadians(double meters) {
 		double radiusRadians = earthMetersToRadians(meters);
 		return (radiusRadians * radiusRadians) / 2;
 	}
@@ -58,11 +58,12 @@ public class RadiusbasedS2Query {
 		double userLng = 77.38510503;
 		s2Point = S2LatLng.fromDegrees(userLat, userLng).toPoint();
 		System.out.println(new S2Cell(s2Point));
-		S2Cap region = S2Cap.fromAxisArea(s2Point, radiusRadians(5000));
+		int radiusInMeters = 5000;
+		S2Cap region = S2Cap.fromAxisArea(s2Point, radiusRadians(radiusInMeters));
 		S2RegionCoverer coverer = new S2RegionCoverer();
-		coverer.setMinLevel(12);
-		coverer.setMaxLevel(12);
-		coverer.setMaxCells(70);
+		coverer.setMinLevel(15);
+		coverer.setMaxLevel(15);
+		// coverer.setMaxCells(70);
 		ArrayList<S2CellId> coveringArea = new ArrayList<S2CellId>();
 		coverer.getCovering(region, coveringArea);
 		System.out.println("5kmradius cells count " + coveringArea.size());
@@ -70,15 +71,10 @@ public class RadiusbasedS2Query {
 
 	}
 
-	private static List<S2CellId> getNeighbour(int lvl, S2CellId cellId) {
-		List<S2CellId> cellIds = new ArrayList<S2CellId>();
-		cellId.getAllNeighbors(lvl, cellIds);
-		return cellIds;
-	}
 
 	private static List<Pair<Double, Double>> getLatLng(String meta, List<S2CellId> cellIds) {
 		List<Pair<Double, Double>> latLngs = new ArrayList<>();
-		// QGIS file format
+		// QGIS file format for visualization
 		StringBuilder data = new StringBuilder("\"UTM_X,N,19,11\",\"UTM_Y,N,19,11\"");
 		data.append("\n");
 		StringBuilder cellTokens = new StringBuilder();
@@ -102,7 +98,7 @@ public class RadiusbasedS2Query {
 	private static void intersection(S2CellId cell) {
 		locationsDB.forEach((k, v) -> {
 			if (cell.intersects(v.id())) {
-				searchResults.add(cell.toToken()+"/"+v.id().toToken() + " " + k);
+				searchResults.add(cell.toToken() + "/" + v.id().toToken() + " " + k);
 			}
 		});
 	}
